@@ -134,6 +134,12 @@ type BackupSpec struct {
 	// SnapshotCompression defines the specification for compression of Snapshots.
 	// +optional
 	SnapshotCompression *CompressionSpec `json:"compression,omitempty"`
+	// HttpProxy defines the environment variable for the S3 proxy endpoint
+	// +optional
+	HttpProxy *string `json:"httpProxy,omitempty"`
+	// HttpNoProxy defines the environment variable for the no_proxy setting
+	// +optional
+	NoProxy *string `json:"noProxy,omitempty"`
 }
 
 // EtcdConfig defines parameters associated etcd deployed

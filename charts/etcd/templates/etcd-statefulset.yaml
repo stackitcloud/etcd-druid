@@ -314,6 +314,14 @@ spec:
               key: "insecureSkipVerify"
               optional: true
 {{- end }}
+{{- if .Values.backup.httpProxy }}
+        - name: "http_proxy"
+          value: {{ .Values.backup.httpProxy }}
+{{- end }}
+{{- if .Values.backup.noProxy }}
+        - name: "no_proxy"
+          value: {{ .Values.backup.noProxy }}
+{{- end }}
         volumeMounts:
         - name: {{ .Values.volumeClaimTemplateName }}
           mountPath: /var/etcd/data

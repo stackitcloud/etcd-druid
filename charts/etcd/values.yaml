@@ -45,17 +45,20 @@ backup:
     requests:
       cpu: 50m
       memory: 128Mi
+  httpProxy:
+  noProxy:
   # compression:
   #   enabled: true
   #   policy: "gzip"
 
 # sharedConfig defines parameters shared and used by Etcd as well as backup-restore sidecar.
-sharedConfig: 
+sharedConfig:
   # autoCompaction defines the specification to be used by Etcd as well as by embedded-Etcd of backup-restore sidecar during restoration.
   # auto-compaction mode: 'periodic' mode or 'revision' mode for etcd as well as for embedded-Etcd of backup-restore sidecar.
   # auto-compaction retention length for etcd as well as for embedded-Etcd of backup-restore sidecar.
   autoCompactionMode: periodic
   autoCompactionRetention: "30m"
+
 
 volumeClaimTemplateName: test
 storageClass: ""

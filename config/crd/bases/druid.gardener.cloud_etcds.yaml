@@ -78,6 +78,14 @@ spec:
                   - Exponential
                   - LimitBased
                   type: string
+                httpNoProxy:
+                  description: HttpNoProxy defines the environment variable for the
+                    no_proxy setting
+                  type: string
+                httpProxy:
+                  description: HttpProxy defines the environment variable for the
+                    proxy endpoint
+                  type: string
                 image:
                   description: Image defines the etcd container image and tag
                   type: string

@@ -97,6 +97,12 @@ type BackupSpec struct {
 	// DeltaSnapshotMemoryLimit defines the memory limit after which delta snapshots will be taken
 	// +optional
 	DeltaSnapshotMemoryLimit *resource.Quantity `json:"deltaSnapshotMemoryLimit,omitempty"`
+	// HttpProxy defines the environment variable for the proxy endpoint
+	// +optional
+	HttpProxy *string `json:"httpProxy,omitempty"`
+	// HttpNoProxy defines the environment variable for the no_proxy setting
+	// +optional
+	HttpNoProxy *string `json:"httpNoProxy,omitempty"`
 }
 
 // EtcdConfig defines parametes associated etcd deployed

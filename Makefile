@@ -15,7 +15,7 @@
 # Image URL to use all building/pushing image targets
 VERSION             := $(shell cat VERSION)
 REPO_ROOT           := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-REGISTRY            := eu.gcr.io/gardener-project/gardener
+REGISTRY            := registry.ske.eu01.stackit.cloud/stackit/gardener-project/gardener
 IMAGE_REPOSITORY    := $(REGISTRY)/etcd-druid
 IMAGE_TAG           := $(VERSION)
 BUILD_DIR           := build

@@ -864,6 +864,8 @@ func (r *EtcdReconciler) getMapFromEtcd(etcd *druidv1alpha1.Etcd) (map[string]in
 		"snapstoreTempDir":         "/var/etcd/data/temp",
 		"deltaSnapshotPeriod":      etcd.Spec.Backup.DeltaSnapshotPeriod,
 		"deltaSnapshotMemoryLimit": deltaSnapshotMemoryLimit,
+		"httpProxy":                etcd.Spec.Backup.HttpProxy,
+		"noProxy":                  etcd.Spec.Backup.NoProxy,
 	}
 
 	if etcd.Spec.Backup.Image == nil {

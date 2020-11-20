@@ -82,8 +82,8 @@ func (in *BackupSpec) DeepCopyInto(out *BackupSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.HttpNoProxy != nil {
-		in, out := &in.HttpNoProxy, &out.HttpNoProxy
+	if in.NoProxy != nil {
+		in, out := &in.NoProxy, &out.NoProxy
 		*out = new(string)
 		**out = **in
 	}

@@ -44,6 +44,8 @@ backup:
     requests:
       cpu: 50m
       memory: 128Mi
+  httpProxy:
+  noProxy:
 
 volumeClaimTemplateName: test
 storageClass: ""

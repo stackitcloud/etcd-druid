@@ -147,6 +147,39 @@ spec:
             secretKeyRef:
               name: {{ .Values.targetStore.storeSecret }}
               key: "accessKeyID"
+{{- else if eq .Values.targetStore.storageProvider "OCS" }}
+        - name: "OCS_ENDPOINT"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.targetStore.storeSecret }}
+              key: "endpoint"
+        - name: "OCS_ACCESS_KEY_ID"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.targetStore.storeSecret }}
+              key: "accessKeyID"
+        - name: "OCS_SECRET_ACCESS_KEY"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.targetStore.storeSecret }}
+              key: "secretAccessKey"
+        - name: "OCS_REGION"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.targetStore.storeSecret }}
+              key: "region"
+        - name: "OCS_DISABLE_SSL"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.targetStore.storeSecret }}
+              key: "disableSSL"
+              optional: true
+        - name: "OCS_INSECURE_SKIP_VERIFY"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.targetStore.storeSecret }}
+              key: "insecureSkipVerify"
+              optional: true
 {{- end }}
 {{- if eq .Values.sourceStore.storageProvider "S3" }}
         - name: "SOURCE_AWS_REGION"
@@ -220,6 +253,39 @@ spec:
             secretKeyRef:
               name: {{ .Values.sourceStore.storeSecret }}
               key: "accessKeyID"
+{{- else if eq .Values.sourceStore.storageProvider "OCS" }}
+        - name: "SOURCE_OCS_ENDPOINT"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.sourceStore.storeSecret }}
+              key: "endpoint"
+        - name: "SOURCE_OCS_ACCESS_KEY_ID"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.sourceStore.storeSecret }}
+              key: "accessKeyID"
+        - name: "SOURCE_OCS_SECRET_ACCESS_KEY"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.sourceStore.storeSecret }}
+              key: "secretAccessKey"
+        - name: "SOURCE_OCS_REGION"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.sourceStore.storeSecret }}
+              key: "region"
+        - name: "SOURCE_OCS_DISABLE_SSL"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.sourceStore.storeSecret }}
+              key: "disableSSL"
+              optional: true
+        - name: "SOURCE_OCS_INSECURE_SKIP_VERIFY"
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.sourceStore.storeSecret }}
+              key: "insecureSkipVerify"
+              optional: true
 {{- end }}
 {{- if or (eq .Values.targetStore.storageProvider "GCS") (eq .Values.sourceStore.storageProvider "GCS") }}
         volumeMounts:

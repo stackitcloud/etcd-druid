@@ -27,3 +27,7 @@ replace (
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.19.6
 	k8s.io/kube-openapi => github.com/gardener/kube-openapi v0.0.0-20201221124747-75e88872edcf // k8s-1.19
 )
+
+replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1
+
+replace github.com/Masterminds/goutils => github.com/Masterminds/goutils v1.1.1

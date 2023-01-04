@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/etcd-druid/pkg/client/kubernetes"
 	"github.com/gardener/etcd-druid/pkg/common"
 	. "github.com/gardener/etcd-druid/pkg/component/etcd/statefulset"
+	"github.com/gardener/etcd-druid/pkg/utils"
 	druidutils "github.com/gardener/etcd-druid/pkg/utils"
 
 	"github.com/gardener/gardener/pkg/operation/botanist/component"
@@ -148,7 +149,7 @@ var _ = Describe("Statefulset", func() {
 			pointer.Int32Ptr(backupPort),
 			imageEtcd,
 			imageBR,
-			checkSumAnnotations)
+			checkSumAnnotations, false)
 		stsDeployer = New(cl, logr.Discard(), values)
 
 		sts = &appsv1.StatefulSet{
@@ -187,6 +188,23 @@ var _ = Describe("Statefulset", func() {
 				Expect(cl.Get(ctx, kutil.Key(namespace, values.Name), sts)).To(Succeed())
 				checkStatefulset(sts, values)
 			})
+
+			Context("should bootstrap a multi replica statefulset successfully", func() {
+				BeforeEach(func() {
+					replicas = pointer.Int32Ptr(3)
+				})
+
+				It("should create the statefulset successfully", func() {
+					Expect(stsDeployer.Deploy(ctx)).To(Succeed())
+
+					sts := &appsv1.StatefulSet{}
+
+					Expect(cl.Get(ctx, kutil.Key(namespace, values.Name), sts)).To(Succeed())
+					checkStatefulset(sts, values)
+					// ensure that annotation gardener.cloud/scaled-to-multi-node is not there
+					Expect(metav1.HasAnnotation(sts.ObjectMeta, "gardener.cloud/scaled-to-multi-node")).To(BeFalse())
+				})
+			})
 		})
 
 		Context("when statefulset exists", func() {
@@ -217,10 +235,10 @@ var _ = Describe("Statefulset", func() {
 					values.Replicas = 3
 					Expect(stsDeployer.Deploy(ctx)).To(Succeed())
 
-					sts := &appsv1.StatefulSet{}
-					Expect(cl.Get(ctx, kutil.Key(namespace, values.Name), sts)).To(Succeed())
-					checkStatefulset(sts, values)
-					Expect(sts.Spec.ServiceName).To(Equal(values.PeerServiceName))
+					updatedSts := &appsv1.StatefulSet{}
+					Expect(cl.Get(ctx, kutil.Key(namespace, values.Name), updatedSts)).To(Succeed())
+					checkStatefulset(updatedSts, values)
+					Expect(updatedSts.Spec.ServiceName).To(Equal(values.PeerServiceName))
 				})
 
 				It("should re-create statefulset because podManagementPolicy is changed", func() {
@@ -233,10 +251,10 @@ var _ = Describe("Statefulset", func() {
 					values.Replicas = 3
 					Expect(stsDeployer.Deploy(ctx)).To(Succeed())
 
-					sts := &appsv1.StatefulSet{}
-					Expect(cl.Get(ctx, kutil.Key(namespace, values.Name), sts)).To(Succeed())
-					checkStatefulset(sts, values)
-					Expect(sts.Spec.PodManagementPolicy).To(Equal(appsv1.ParallelPodManagement))
+					updatedSts := &appsv1.StatefulSet{}
+					Expect(cl.Get(ctx, kutil.Key(namespace, values.Name), updatedSts)).To(Succeed())
+					checkStatefulset(updatedSts, values)
+					Expect(updatedSts.Spec.PodManagementPolicy).To(Equal(appsv1.ParallelPodManagement))
 				})
 			})
 		})
@@ -267,42 +285,56 @@ var _ = Describe("Statefulset", func() {
 			}
 
 			Context("with provider Local", func() {
+				var (
+					backupSecretData map[string][]byte
+					hostPath         string
+				)
+
 				BeforeEach(func() {
 					storageProvider = pointer.StringPtr(druidutils.Local)
 				})
 
-				It("should configure the correct provider values", func() {
-					Expect(stsDeployer.Deploy(ctx)).To(Succeed())
-					sts := &appsv1.StatefulSet{}
-					Expect(cl.Get(ctx, kutil.Key(namespace, values.Name), sts)).To(Succeed())
-
-					hpt := corev1.HostPathDirectory
-
-					// check volumes
-					Expect(sts.Spec.Template.Spec.Volumes).To(ContainElements(corev1.Volume{
-						Name: "host-storage",
-						VolumeSource: corev1.VolumeSource{
-							HostPath: &corev1.HostPathVolumeSource{
-								Path: "/etc/gardener/local-backupbuckets/" + container,
-								Type: &hpt,
-							},
+				JustBeforeEach(func() {
+					Expect(cl.Create(ctx, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      etcdBackupSecretName,
+							Namespace: namespace,
 						},
-					}))
+						Data: backupSecretData,
+					})).To(Succeed())
+				})
 
-					backupRestoreContainer := sts.Spec.Template.Spec.Containers[1]
-					Expect(backupRestoreContainer.Name).To(Equal(backupRestore))
+				Context("when backup secret defines a hostPath", func() {
+					BeforeEach(func() {
+						hostPath = "/data"
+						backupSecretData = map[string][]byte{
+							utils.EtcdBackupSecretHostPath: []byte(hostPath),
+						}
+					})
 
-					// Check command
-					Expect(backupRestoreContainer.Command).To(ContainElements(
-						"--storage-provider="+string(*etcd.Spec.Backup.Store.Provider),
-						"--store-prefix="+prefix,
-					))
+					It("should configure the correct provider values", func() {
+						Expect(stsDeployer.Deploy(ctx)).To(Succeed())
+						sts := &appsv1.StatefulSet{}
+						Expect(cl.Get(ctx, kutil.Key(namespace, values.Name), sts)).To(Succeed())
 
-					// check volume mount
-					Expect(backupRestoreContainer.VolumeMounts).To(ContainElement(corev1.VolumeMount{
-						Name:      "host-storage",
-						MountPath: container,
-					}))
+						checkLocalProviderVaues(etcd, sts, hostPath)
+					})
+				})
+
+				Context("when backup secret doesn't define a hostPath", func() {
+					BeforeEach(func() {
+						backupSecretData = map[string][]byte{
+							"foo": []byte("bar"),
+						}
+					})
+
+					It("should configure the correct provider values", func() {
+						Expect(stsDeployer.Deploy(ctx)).To(Succeed())
+						sts := &appsv1.StatefulSet{}
+						Expect(cl.Get(ctx, kutil.Key(namespace, values.Name), sts)).To(Succeed())
+
+						checkLocalProviderVaues(etcd, sts, utils.LocalProviderDefaultMountPath)
+					})
 				})
 			})
 		})
@@ -394,7 +426,6 @@ func checkBackup(etcd *druidv1alpha1.Etcd, sts *appsv1.StatefulSet) {
 
 func checkStatefulset(sts *appsv1.StatefulSet, values Values) {
 	checkStsOwnerRefs(sts.ObjectMeta.OwnerReferences, values)
-
 	store, err := druidutils.StorageProviderFromInfraProvider(values.BackupStore.Provider)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(*sts).To(MatchFields(IgnoreExtras, Fields{
@@ -817,6 +848,8 @@ func parseQuantity(q string) resource.Quantity {
 	return val
 }
 
+const etcdBackupSecretName = "etcd-backup"
+
 func getEtcdBackup(provider *string) *druidv1alpha1.StoreSpec {
 	storageProvider := pointer.StringDeref(provider, druidutils.ABS)
 
@@ -825,7 +858,7 @@ func getEtcdBackup(provider *string) *druidv1alpha1.StoreSpec {
 		Prefix:    prefix,
 		Provider:  (*druidv1alpha1.StorageProvider)(&storageProvider),
 		SecretRef: &corev1.SecretReference{
-			Name: "etcd-backup",
+			Name: etcdBackupSecretName,
 		},
 	}
 }
@@ -893,4 +926,34 @@ func getReadinessHandlerForMultiNode(val Values) gomegatypes.GomegaMatcher {
 			),
 		})),
 	})
+}
+
+func checkLocalProviderVaues(etcd *druidv1alpha1.Etcd, sts *appsv1.StatefulSet, hostPath string) {
+	hpt := corev1.HostPathDirectory
+
+	// check volumes
+	ExpectWithOffset(1, sts.Spec.Template.Spec.Volumes).To(ContainElements(corev1.Volume{
+		Name: "host-storage",
+		VolumeSource: corev1.VolumeSource{
+			HostPath: &corev1.HostPathVolumeSource{
+				Path: hostPath + "/" + container,
+				Type: &hpt,
+			},
+		},
+	}))
+
+	backupRestoreContainer := sts.Spec.Template.Spec.Containers[1]
+	ExpectWithOffset(1, backupRestoreContainer.Name).To(Equal(backupRestore))
+
+	// Check command
+	ExpectWithOffset(1, backupRestoreContainer.Command).To(ContainElements(
+		"--storage-provider="+string(*etcd.Spec.Backup.Store.Provider),
+		"--store-prefix="+prefix,
+	))
+
+	// check volume mount
+	ExpectWithOffset(1, backupRestoreContainer.VolumeMounts).To(ContainElement(corev1.VolumeMount{
+		Name:      "host-storage",
+		MountPath: container,
+	}))
 }

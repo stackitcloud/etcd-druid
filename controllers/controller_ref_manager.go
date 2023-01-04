@@ -1,23 +1,16 @@
-/*
-Copyright 2016 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-
-This file was copied and modified from the kubernetes/kubernetes project
-https://github.com/kubernetes/kubernetes/release-1.8/pkg/controller/controller_ref_manager.go
-
-Modifications Copyright (c) 2017 SAP SE or an SAP affiliate company. All rights reserved.
-*/
+// Copyright (c) 2022 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 // Package controllers is used to provide the core functionalities of hvpa-controller
 package controllers
@@ -44,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -72,8 +64,8 @@ func (m *BaseControllerRefManager) CanAdopt() error {
 // claimObject tries to take ownership of an object for this controller.
 //
 // It will reconcile the following:
-//   * Adopt orphans if the match function returns true.
-//   * Release owned objects if the match function returns false.
+//   - Adopt orphans if the match function returns true.
+//   - Release owned objects if the match function returns false.
 //
 // A non-nil error is returned if some form of reconciliation was attempted and
 // failed. Usually, controllers should try again later in case reconciliation
@@ -208,36 +200,6 @@ func (m *EtcdDruidRefManager) FetchStatefulSet(ctx context.Context, etcd *druidv
 	}
 
 	return statefulSets, err
-}
-
-func (m *EtcdDruidRefManager) ClaimPodDisruptionBudget(ctx context.Context, pdb *policyv1beta1.PodDisruptionBudget, filters ...func(*policyv1beta1.PodDisruptionBudget) bool) (*policyv1beta1.PodDisruptionBudget, error) {
-	var errlist []error
-
-	match := func(obj metav1.Object) bool {
-		tempPdb := obj.(*policyv1beta1.PodDisruptionBudget)
-		// Check selector first so filters only run on potentially matching poddisruptionbudgets
-		if !m.Selector.Matches(labels.Set(pdb.Labels)) {
-			return false
-		}
-		for _, filter := range filters {
-			if !filter(tempPdb) {
-				return false
-			}
-		}
-		return true
-	}
-
-	ok, err := m.claimObject(ctx, pdb, match, m.AdoptResource, m.ReleaseResource)
-
-	if err != nil {
-		errlist = append(errlist, err)
-	}
-
-	var claimed *policyv1beta1.PodDisruptionBudget
-	if ok {
-		claimed = pdb.DeepCopy()
-	}
-	return claimed, utilerrors.NewAggregate(errlist)
 }
 
 // AdoptResource sends a patch to take control of the Etcd. It returns the error if

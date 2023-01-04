@@ -37,6 +37,8 @@ const (
 	BackupFailed string = "BackupFailed"
 	// Unknown is a constant that means that the etcd backup status is currently not known
 	Unknown string = "Unknown"
+	// ConditionNotChecked is a constant that means that the etcd backup status has not been updated or rechecked
+	ConditionNotChecked string = "ConditionNotChecked"
 )
 
 func (a *backupReadyCheck) Check(ctx context.Context, etcd druidv1alpha1.Etcd) Result {
@@ -46,6 +48,12 @@ func (a *backupReadyCheck) Check(ctx context.Context, etcd druidv1alpha1.Etcd) R
 		status:  druidv1alpha1.ConditionUnknown,
 		reason:  Unknown,
 		message: "Cannot determine etcd backup status",
+	}
+
+	// Special case of etcd not being configured to take snapshots
+	// Do not add the BackupReady condition if backup is not configured
+	if etcd.Spec.Backup.Store == nil || etcd.Spec.Backup.Store.Provider == nil || len(*etcd.Spec.Backup.Store.Provider) == 0 {
+		return nil
 	}
 
 	//Fetch snapshot leases
@@ -78,7 +86,7 @@ func (a *backupReadyCheck) Check(ctx context.Context, etcd druidv1alpha1.Etcd) R
 	} else if deltaLeaseRenewTime == nil && fullLeaseRenewTime != nil {
 		//Most probable during a startup scenario for new clusters
 		//Special case. Return Unknown condition for some time to allow delta backups to start up
-		if time.Since(fullLeaseRenewTime.Time) < 5*etcd.Spec.Backup.DeltaSnapshotPeriod.Duration {
+		if time.Since(fullLeaseRenewTime.Time) > 5*etcd.Spec.Backup.DeltaSnapshotPeriod.Duration {
 			result.message = "Periodic delta snapshots not started yet"
 			return result
 		}

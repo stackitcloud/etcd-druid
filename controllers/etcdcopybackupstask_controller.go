@@ -226,6 +226,11 @@ func (r *EtcdCopyBackupsTaskReconciler) doReconcile(ctx context.Context, task *d
 		return status, fmt.Errorf("could not decode job object from chart: %w", err)
 	}
 
+	// set ownerReference on Job
+	if err := controllerutil.SetControllerReference(task, job, r.Scheme()); err != nil {
+		return status, fmt.Errorf("could not set ownerReference on job %s: %w", kutil.ObjectName(job), err)
+	}
+
 	// Create job
 	logger.Info("Creating job", "job", kutil.ObjectName(job))
 	if err := r.Create(ctx, job); err != nil {

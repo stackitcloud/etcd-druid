@@ -45,6 +45,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
@@ -150,6 +151,10 @@ var _ = Describe("Etcd Controller", func() {
 				},
 			}
 			Expect(k8sClient.Create(context.TODO(), pvc)).To(Succeed())
+			DeferCleanup(func() {
+				Expect(k8sClient.Delete(ctx, pvc)).To(Succeed())
+				removePVCFinalizer(ctx, pvc)
+			})
 
 			// Create PVC warning Event
 			pvcMessage := "Failed to provision volume"
@@ -178,6 +183,72 @@ var _ = Describe("Etcd Controller", func() {
 				}
 				return *instance.Status.LastError
 			}, timeout, pollingInterval).Should(ContainSubstring(pvcMessage))
+		})
+
+		Context("with PVC", func() {
+			var pvc *corev1.PersistentVolumeClaim
+
+			BeforeEach(func() {
+				pvc = &corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("%s-%s-%d", sts.Spec.VolumeClaimTemplates[0].Name, sts.Name, 1),
+						Namespace: sts.Namespace,
+						Labels:    instance.Spec.Labels,
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: resource.MustParse("1Gi"),
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, pvc)).To(Succeed())
+				// PVC will be cleaned up as part of the test later
+
+				testutils.SetStatefulSetReady(sts)
+				Expect(k8sClient.Status().Update(ctx, sts)).To(Succeed())
+				Eventually(func() (bool, error) { return testutils.IsStatefulSetCorrectlyReconciled(ctx, k8sClient, instance, sts) }, timeout, pollingInterval).Should(BeTrue())
+			})
+
+			It("should recreate volumes", func() {
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
+					metav1.SetMetaDataAnnotation(&instance.ObjectMeta, druidv1alpha1.RecreateVolumesAnnotation, "true")
+					g.Expect(k8sClient.Update(ctx, instance)).To(Succeed())
+				}).Should(Succeed())
+
+				Eventually(func(g Gomega) map[string]string {
+					g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(instance), instance)).To(Succeed())
+					return instance.Annotations
+				}, 10*time.Second, pollingInterval).Should(And(
+					Not(HaveKey(druidv1alpha1.RecreateVolumesAnnotation)),
+					HaveKeyWithValue(druidv1alpha1.RecreatedAtAnnotation, Not(BeEmpty())),
+				), "expected ETCD annotations to be updated")
+
+				recreatedRaw := instance.Annotations[druidv1alpha1.RecreatedAtAnnotation]
+				recreatedAt, err := time.Parse(time.RFC3339Nano, recreatedRaw)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(recreatedAt).To(BeTemporally("~", time.Now(), 10*time.Second)) // lets give ourselves some wiggle room
+
+				Eventually(func(g Gomega) {
+					g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(pvc), pvc)).To(Succeed())
+					g.Expect(pvc.DeletionTimestamp).NotTo(BeZero())
+				}, timeout, pollingInterval).Should(Succeed())
+				removePVCFinalizer(ctx, pvc)
+
+				Eventually(func(g Gomega) map[string]string {
+					g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(sts), sts)).To(Succeed())
+					return sts.Spec.Template.Annotations
+				}, 10*time.Second, pollingInterval).Should(HaveKeyWithValue(druidv1alpha1.RecreatedAtAnnotation, recreatedRaw))
+
+				Eventually(func() error {
+					// unblock reconciler, which waits for the STS to be ready
+					testutils.SetStatefulSetReady(sts)
+					return k8sClient.Status().Update(ctx, sts)
+				}).Should(Succeed())
+			})
 		})
 		AfterEach(func() {
 			// Delete `etcd` instance
@@ -1657,3 +1728,19 @@ var _ = Describe("buildPredicate", func() {
 		)
 	})
 })
+
+func removePVCFinalizer(ctx context.Context, pvc *corev1.PersistentVolumeClaim) {
+	GinkgoHelper()
+	Eventually(func(g Gomega) {
+		// in envtest, noone deletes the "pvc-protection" finalizer
+		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(pvc), pvc)
+		if apierrors.IsNotFound(err) {
+			return
+		}
+		Expect(err).NotTo(HaveOccurred())
+		g.Expect(pvc.DeletionTimestamp).NotTo(BeZero())
+		pvc.Finalizers = nil
+		g.Expect(k8sClient.Update(ctx, pvc)).To(Succeed())
+		g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(pvc), pvc)).To(matchers.BeNotFoundError())
+	}, timeout, pollingInterval).Should(Succeed())
+}

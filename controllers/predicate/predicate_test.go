@@ -443,6 +443,50 @@ var _ = Describe("Druid Predicate", func() {
 		})
 	})
 
+	Describe("#HasRecreateVolumesAnnotation", func() {
+		var pred predicate.Predicate
+
+		JustBeforeEach(func() {
+			pred = HasRecreateVolumesAnnotation()
+		})
+
+		Context("when has no operation annotation", func() {
+			BeforeEach(func() {
+				obj = &druidv1alpha1.Etcd{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: make(map[string]string),
+					},
+				}
+			})
+
+			It("should return false", func() {
+				gomega.Expect(pred.Create(createEvent)).To(gomega.BeFalse())
+				gomega.Expect(pred.Update(updateEvent)).To(gomega.BeFalse())
+				gomega.Expect(pred.Delete(deleteEvent)).To(gomega.BeTrue())
+				gomega.Expect(pred.Generic(genericEvent)).To(gomega.BeFalse())
+			})
+		})
+
+		Context("when has operation annotation", func() {
+			BeforeEach(func() {
+				obj = &druidv1alpha1.Etcd{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							druidv1alpha1.RecreateVolumesAnnotation: "true",
+						},
+					},
+				}
+			})
+
+			It("should return true", func() {
+				gomega.Expect(pred.Create(createEvent)).To(gomega.BeTrue())
+				gomega.Expect(pred.Update(updateEvent)).To(gomega.BeTrue())
+				gomega.Expect(pred.Delete(deleteEvent)).To(gomega.BeTrue())
+				gomega.Expect(pred.Generic(genericEvent)).To(gomega.BeTrue())
+			})
+		})
+	})
+
 	Describe("#OR", func() {
 		var pred predicate.Predicate
 

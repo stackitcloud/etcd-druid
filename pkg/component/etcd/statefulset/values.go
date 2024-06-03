@@ -132,4 +132,7 @@ type Values struct {
 
 	// UseEtcdWrapper enables the use of etcd-wrapper image and a compatible version of etcd-backup-restore
 	UseEtcdWrapper bool
+
+	// RecreatedVolumesAt is the timestamp when the last volume recreation was requested.
+	RecreatedVolumesAt string
 }

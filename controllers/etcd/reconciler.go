@@ -17,6 +17,7 @@ package etcd
 import (
 	"context"
 	"fmt"
+	"time"
 
 	druidv1alpha1 "github.com/gardener/etcd-druid/api/v1alpha1"
 	ctrlutils "github.com/gardener/etcd-druid/controllers/utils"
@@ -173,6 +174,19 @@ func (r *Reconciler) reconcile(ctx context.Context, etcd *druidv1alpha1.Etcd) (c
 		return ctrl.Result{
 			Requeue: true,
 		}, err
+	}
+
+	if err := r.updateAnnotations(ctx, logger, etcd); err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{
+			RequeueAfter: 10 * time.Second,
+		}, err
+	}
+
+	if requeue, err := r.checkStatefulSetProgress(ctx, logger, etcd); requeue || err != nil {
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 	}
 
 	preReconcileResult := r.preReconcileEtcd(ctx, logger, etcd)

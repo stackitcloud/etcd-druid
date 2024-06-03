@@ -51,6 +51,11 @@ const (
 	Periodic CompactionMode = "periodic"
 	// Revision is a constant to set auto-compaction-mode 'revision' for revision number based retention.
 	Revision CompactionMode = "revision"
+
+	// RecreateVolumesAnnotation can be set to true which triggers a one-time recreation of all persistent volumes.
+	RecreateVolumesAnnotation = "druid.gardener.cloud/recreate-volumes"
+	// RecreatedAtAnnotation is used internally to track when the last PVC recreation was triggered.
+	RecreatedAtAnnotation = "druid.gardener.cloud/recreated-at"
 )
 
 // +genclient

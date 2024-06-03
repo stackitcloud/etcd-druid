@@ -51,11 +51,15 @@ func (r *Reconciler) RegisterWithManager(mgr ctrl.Manager, ignoreOperationAnnota
 // BuildPredicate builds the predicates used by Etcd controller.
 func BuildPredicate(ignoreOperationAnnotation bool) predicate.Predicate {
 	if ignoreOperationAnnotation {
-		return predicate.GenerationChangedPredicate{}
+		return predicate.Or(
+			predicate.GenerationChangedPredicate{},
+			druidpredicates.HasRecreateVolumesAnnotation(),
+		)
 	}
 
 	return predicate.Or(
 		druidpredicates.HasOperationAnnotation(),
+		druidpredicates.HasRecreateVolumesAnnotation(),
 		druidpredicates.LastOperationNotSuccessful(),
 		predicateutils.IsDeleting(),
 	)

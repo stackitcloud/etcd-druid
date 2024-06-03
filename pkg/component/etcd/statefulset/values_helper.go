@@ -141,7 +141,8 @@ func GenerateValues(
 		ConfigMapName:           etcd.GetConfigmapName(),
 		PeerTLSChangedToEnabled: peerTLSChangedToEnabled,
 
-		UseEtcdWrapper: useEtcdWrapper,
+		UseEtcdWrapper:     useEtcdWrapper,
+		RecreatedVolumesAt: etcd.Annotations[druidv1alpha1.RecreatedAtAnnotation],
 	}
 
 	values.EtcdCommandArgs = getEtcdCommandArgs(values)

@@ -337,6 +337,7 @@ func (c *component) createDeployFlow(ctx context.Context) (*flow.Flow, error) {
 			// if sts recreation tasks for peer url tls have already been added then there is no need to additionally add tasks to explicitly handle immutable field updates.
 			taskID = c.addImmutableFieldUpdateTask(g, sts)
 		}
+		taskID = c.addTaintPVCsTask(g, sts, taskID)
 	}
 	c.addCreateOrPatchTask(g, sts, taskID)
 
@@ -536,7 +537,7 @@ func (c *component) createOrPatch(ctx context.Context, sts *appsv1.StatefulSet, 
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Annotations: c.values.Annotations,
+					Annotations: getPodAnnotations(c.values, sts),
 					Labels:      utils.MergeStringMaps(make(map[string]string), c.values.AdditionalPodLabels, c.values.PodLabels),
 				},
 				Spec: corev1.PodSpec{

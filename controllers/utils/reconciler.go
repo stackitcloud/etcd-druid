@@ -15,34 +15,21 @@
 package utils
 
 import (
-	"path/filepath"
-
-	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/etcd-druid/pkg/common"
+	v1beta1constants "github.com/gardener/gardener/pkg/apis/core/v1beta1/constants"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
+	"github.com/gardener/etcd-druid/charts"
 )
 
-const (
-	// defaultImageVector is a constant for the path to the default image vector file.
-	defaultImageVector = "images.yaml"
-)
-
-// getImageYAMLPath returns the path to the image vector YAML file.
-// The path to the default image vector YAML path is returned, unless `useEtcdWrapperImageVector`
-// is set to true, in which case the path to the etcd wrapper image vector YAML is returned.
-func getImageYAMLPath() string {
-	return filepath.Join(common.ChartPath, defaultImageVector)
-}
-
-// CreateImageVector creates an image vector from the default images.yaml file or the images-wrapper.yaml file.
+// CreateImageVector creates an image vector from the default images.yaml file.
 func CreateImageVector() (imagevector.ImageVector, error) {
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(getImageYAMLPath())
+	imgVec, err := imagevector.Read(charts.ImagesYAML)
 	if err != nil {
 		return nil, err
 	}
-	return imageVector, nil
+	return imagevector.WithEnvOverride(imgVec)
 }
 
 // HasOperationAnnotation checks if the given object has the operation annotation and its value is set to Reconcile.

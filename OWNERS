@@ -1,0 +1,6 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+
+reviewers:
+- stackitcloud-etcd-druid-reviewers
+approvers:
+- stackitcloud-etcd-druid-approvers

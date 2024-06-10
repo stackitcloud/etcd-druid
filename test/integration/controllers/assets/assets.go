@@ -17,10 +17,9 @@ package assets
 import (
 	"path/filepath"
 
-	"github.com/gardener/etcd-druid/pkg/common"
+	"github.com/gardener/etcd-druid/controllers/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-
-	. "github.com/onsi/gomega"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 // GetEtcdCrdPath returns the path to the Etcd CRD.
@@ -33,20 +32,9 @@ func GetEtcdCopyBackupsTaskCrdPath() string {
 	return filepath.Join("..", "..", "..", "..", "config", "crd", "bases", "10-crd-druid.gardener.cloud_etcdcopybackupstasks.yaml")
 }
 
-// GetEtcdCopyBackupsBaseChartPath returns the path to the etcd-copy-backups chart.
-func GetEtcdCopyBackupsBaseChartPath() string {
-	return filepath.Join("..", "..", "..", "..", "charts", "etcd-copy-backups")
-}
-
-// GetEtcdChartPath returns the path to the etcd chart.
-func GetEtcdChartPath() string {
-	return filepath.Join("..", "..", "..", "..", "charts", "etcd")
-}
-
 // CreateImageVector creates an image vector.
 func CreateImageVector() imagevector.ImageVector {
-	imageVectorPath := filepath.Join("..", "..", "..", "..", common.ChartPath, "images.yaml")
-	imageVector, err := imagevector.ReadGlobalImageVectorWithEnvOverride(imageVectorPath)
-	Expect(err).To(BeNil())
-	return imageVector
+	vec, err := utils.CreateImageVector()
+	utilruntime.Must(err)
+	return vec
 }

@@ -1,0 +1,31 @@
+# See the OWNERS docs at https://go.k8s.io/owners
+
+aliases:
+  stackitcloud-etcd-druid-reviewers:
+  - dergeberl
+  - einfachnuralex
+  - JuliusSte
+  - Kumm-Kai
+  - nschad
+  - rgroemmer
+  - robinschneider
+  - maboehm
+  - timebertt
+  - hown3d
+  - Duciwuci
+  - lukasjarosch
+  - ftl
+  stackitcloud-etcd-druid-approvers:
+  - dergeberl
+  - einfachnuralex
+  - JuliusSte
+  - Kumm-Kai
+  - nschad
+  - rgroemmer
+  - robinschneider
+  - maboehm
+  - timebertt
+  - hown3d
+  - Duciwuci
+  - lukasjarosch
+  - ftl

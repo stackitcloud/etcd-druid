@@ -15,5 +15,4 @@ RUN .ci/build
 FROM gcr.io/distroless/static-debian11:nonroot AS druid
 WORKDIR /
 COPY --from=builder /go/src/github.com/gardener/etcd-druid/bin/etcd-druid /etcd-druid
-COPY charts charts
 ENTRYPOINT ["/etcd-druid"]

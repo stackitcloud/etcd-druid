@@ -172,21 +172,3 @@ deploy-localstack: $(KUBECTL)
 .PHONY: ci-e2e-kind
 ci-e2e-kind:
 	BUCKET_NAME=$(BUCKET_NAME) ./hack/ci-e2e-kind.sh
-
-# SKE-TARGETS
-
-.PHONY: verify
-verify: check fmt test
-
-
-.PHONY: verify-extended
-verify-extended: check check-generate fmt test test-integration
-
-export PUSH ?= false
-export REPO := reg3.infra.ske.eu01.stackit.cloud/stackitcloud/etcd-druid
-export TAG := $(VERSION)
-export GIT_TAG := $(shell git describe --tag --always --dirty)
-.PHONY: image
-images: $(KO)
-	KO_DOCKER_REPO=$(REPO) $(KO) build --image-label org.opencontainers.image.source="https://github.com/stackitcloud/etcd-druid" \
-	--sbom none -t $(TAG) -t $(GIT_TAG) --bare --platform linux/amd64,linux/arm64 --push=$(PUSH) .

@@ -40,7 +40,6 @@ const (
 	openstack = "openstack"
 	dell      = "dell"
 	openshift = "openshift"
-	stackit   = "stackit"
 )
 
 const (
@@ -101,7 +100,7 @@ func StorageProviderFromInfraProvider(infra *druidv1alpha1.StorageProvider) (str
 		return GCS, nil
 	case dell, ECS:
 		return ECS, nil
-	case openshift, OCS, stackit:
+	case openshift, OCS:
 		return OCS, nil
 	case Local, druidv1alpha1.StorageProvider(strings.ToLower(Local)):
 		return Local, nil
